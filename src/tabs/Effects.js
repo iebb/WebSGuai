@@ -36,8 +36,12 @@ export function Effects() {
 
   const setAnimSpeed = async (value) => {
     setSpeed(value);
-    await SGuai.send(0x24, [value]);
-    await SGuai.read(0x24);
+    try {
+      await SGuai.send(0x24, [value]);
+      await SGuai.read(0x24);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   return (

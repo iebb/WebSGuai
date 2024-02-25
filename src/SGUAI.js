@@ -30,6 +30,8 @@ export class SGUAI {
   setConnected = () => {
 
   }
+  setCommand = () => {
+  }
   disconnectionCallback = () => {
     console.log("dummy");
   }
@@ -46,10 +48,11 @@ export class SGUAI {
   async resolveQueue() {
     if (this.inQueue) return;
     this.inQueue = true;
-    while(this.queue.length > 0) {
+    while(this.queue.length > 0 && this.connected) {
+      const val = this.queue.shift();
+      this.setCommand({command: val, direction: ">"});
       try {
-        await this.characteristic.writeValue(
-          this.queue.shift());
+        await this.characteristic.writeValue(val);
       } catch (e) {
         console.error(e);
       }
@@ -96,7 +99,7 @@ export class SGUAI {
     return await this.characteristic2.readValue();
   }
 
-  async init() {
+  async syncTime() {
     // 04 635144e5 00 0320
     const buf = new ArrayBuffer(7);
     const dv = new DataView(buf);
@@ -106,15 +109,21 @@ export class SGUAI {
     dv.setInt16(5, Math.abs(tzOffset));
 
     await this.send(0x4, new Uint8Array(buf));
+  }
+
+  async init() {
+    await this.refresh();
+
+    await new Promise(r => setTimeout(r, 100));
 
     await this.read(0x23, []);
     await this.read(0x24, []);
     await this.read(0x27, []);
 
+    await new Promise(r => setTimeout(r, 100));
+
     await this.read(0x3, []);
     await this.read(0x14, []);
-
-    await this.refresh();
   }
 
   async refresh() {
@@ -128,16 +137,16 @@ export class SGUAI {
 
   async refreshAll() {
     if (this.connected) {
+      await this.read(0x2, []);
+      await this.read(0x1, []);
+      await this.read(0xb, []);
+
       await this.read(0x23, []);
       await this.read(0x24, []);
       await this.read(0x27, []);
 
       await this.read(0x3, []);
       await this.read(0x14, []);
-
-      await this.read(0x2, []);
-      await this.read(0x1, []);
-      await this.read(0xb, []);
       this.setConnected(+new Date());
     }
   }
@@ -155,19 +164,14 @@ export class SGUAI {
       // console.log("0x0d0a detected, assemble", this.slices);
       const _slices = [...this.slices];
       this.slices = [];
-      const merged = new DataView(new Uint8Array(_slices).buffer);
+      const uint8Slices = new Uint8Array(_slices);
+      const merged = new DataView(uint8Slices.buffer);
       const msgType = merged.getUint8(2);
       this.responses[msgType] = merged;
       if (this.responseCallback[msgType]) {
         this.responseCallback[msgType](merged);
       }
-
-      const a = [];
-      for (let i = 0; i < merged.byteLength; i++) {
-        a.push(('00' + merged.getUint8(i).toString(16)).slice(-2));
-      }
-      console.log(merged.getUint8(2), '> ' + a.join(' '));
-
+      this.setCommand({command: uint8Slices, direction: "<"});
     }
   }
 

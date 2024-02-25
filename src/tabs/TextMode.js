@@ -1,6 +1,7 @@
-import {useContext, useState} from "react";
-import {Heading, Input} from "@chakra-ui/react";
+import {useContext, useEffect, useState} from "react";
+import {Box, Button, Heading, Input} from "@chakra-ui/react";
 import {ConnectionContext} from "../Contexts";
+import {FaPlay} from "react-icons/fa";
 
 
 function strEncodeUTF16(str) {
@@ -18,6 +19,12 @@ export function TextMode() {
   const connected = useContext(ConnectionContext);
   const { SGuai } = window;
 
+  const play = async () => {
+    const encoded = strEncodeUTF16(localStorage.text);
+    if (connected) {
+      SGuai?.send(0x17, [1, ...encoded]);
+    }
+  }
 
   const handleChange = async (event) => {
     setValue(event.target.value)
@@ -29,7 +36,17 @@ export function TextMode() {
   }
 
   return (
-    <>
+    <Box>
+      <Box>
+        <Button leftIcon={<FaPlay />}
+                colorScheme='pink'
+                variant='solid'
+                onClick={() => play()}
+                isDisabled={!connected}
+        >
+          Play On Device
+        </Button>
+      </Box>
       <Heading as='h4' size='md' my={4}>Text</Heading>
       <Input
         value={value}
@@ -37,6 +54,6 @@ export function TextMode() {
         placeholder=''
         size='lg'
       />
-    </>
+    </Box>
   )
 }

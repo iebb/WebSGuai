@@ -2,7 +2,7 @@ import {useContext, useEffect, useState} from "react";
 import {Box, Button, HStack, Text} from "@chakra-ui/react";
 import {LinkIcon} from "@chakra-ui/icons";
 import {ConnectionContext} from "../Contexts";
-import { FaBatteryThreeQuarters } from "react-icons/fa6";
+import { FaBatteryThreeQuarters } from "react-icons/fa";
 export function DeviceState() {
 
   const [connecting, setConnecting] = useState(false);

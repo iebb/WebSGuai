@@ -1,5 +1,5 @@
 import {Box, Tab, TabList, Tabs} from "@chakra-ui/react";
-import {Route, Routes, useNavigate} from "react-router-dom";
+import {Route, Routes, useLocation, useNavigate} from "react-router-dom";
 import {PixelScreen} from "./tabs/PixelScreen";
 import {TextMode} from "./tabs/TextMode";
 import {Effects} from "./tabs/Effects";
@@ -9,6 +9,7 @@ import {PixelAnimations} from "./tabs/PixelAnimations";
 export function TabsPage(props) {
 
   let navigate = useNavigate();
+  let { pathname } = useLocation();
 
   const pages = [
     {
@@ -31,11 +32,19 @@ export function TabsPage(props) {
       name: "Effects",
       element: <Effects {...props} />
     }
-  ]
+  ].map((val, i) => ({...val, index: i}))
 
+
+  let tabIndex = 0;
+
+  for(const route of pages) {
+    if (route.path === pathname) {
+      tabIndex = route.index;
+    }
+  }
   return (
     <Box>
-      <Tabs>
+      <Tabs defaultIndex={tabIndex}>
         <TabList>
           {
             pages.map(p =>
@@ -44,10 +53,10 @@ export function TabsPage(props) {
           }
         </TabList>
       </Tabs>
-      <Box mt={4} p={2}>
+      <Box mt={1} p={2}>
         <Routes>
           {
-            pages.map(p => <Route {...p} key={p.path}/>)
+            pages.map(p => <Route {...p} key={p.path} />)
           }
         </Routes>
       </Box>

@@ -1,20 +1,22 @@
-import {useEffect, useState} from "react";
-import {Box, Center, Heading, Text, Input, SimpleGrid, Textarea} from "@chakra-ui/react";
-import {decodeBitmap, encodeBitmap} from "./images";
+import {useContext, useEffect, useState} from "react";
+import {Box, Button, Heading, Text, Textarea} from "@chakra-ui/react";
+import {decodeBitmap} from "./images";
+import {FaPlay} from "react-icons/fa";
+import {ConnectionContext} from "../Contexts";
 
-const defaultImage = "AAAAAAAAAAAAAAAAAAAAAAAVAAAAAAAVAAAAAAAXACJknJORADKVIqRRACrmIsRAACaFIqRAACJ0nJOAAAAAAAAAAAAAAAAA";
+const defaultImage = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-const pixelSize = 6;
+const pixelSize = 7;
 const marginSize = 0;
 const pixelSizeWithMargin = pixelSize + 2 * marginSize;
 
 
 
 export function PixelAnimations() {
-  const [mouseDown, setMouseDown] = useState(false);
   const [images, setImages] = useState([defaultImage, defaultImage, defaultImage]);
   const [invalidInput, setInvalidInput] = useState(false);
-  const [encoded, setEncoded] = useState(false);
+  const [encoded, setEncoded] = useState("");
+  const connected = useContext(ConnectionContext);
 
   const { SGuai } = window;
 
@@ -28,41 +30,56 @@ export function PixelAnimations() {
     } catch {
 
     }
-    play(images);
+    setEncoded(images.join("\n"));
   }, [SGuai]);
 
   const play = async (images) => {
     setImages(images);
-    for(let i = 0; i < images.length; i++) {
-      await SGuai.send(0x26, [i, 255, ...decodeBitmap(images[i])]);
+    const duration = 0xdd;
+    try {
+      for (let i = 0; i < images.length; i++) {
+        await SGuai.send(0x26, [i, duration, ...decodeBitmap(images[i])]);
+      }
+      //await SGuai.send(0x26, [images.length, duration, ...decodeBitmap(images[0])]);
+      await SGuai.send(0x26, [images.length, duration]);
+      localStorage.animation = images.join("\n");
+    } catch (e) {
+      console.error(e);
     }
-    await SGuai.send(0x26, [images.length]);
-    localStorage.animation = images.join("\n");
-    setEncoded(images.join("\n"));
   }
 
   return (
-    <div>
-      <Box mt={4}>
-        <Heading as='h4' size='md' my={4}>Pixel Animations</Heading>
-        <SimpleGrid columns={3} spacing={10}>
+    <Box>
+      <Box>
+        <Button leftIcon={<FaPlay />}
+                colorScheme='pink'
+                variant='solid'
+                onClick={() => play(images)}
+                isDisabled={!connected}
+        >
+          Play On Device
+        </Button>
+      </Box>
+      <Heading as='h4' size='md' my={4}>Preview</Heading>
+      <Box spacing={10}>
         {
           images.map((im, _idx) => {
             const image = decodeBitmap(im);
             return (
               <Box
                 key={_idx}
-                my={2}
+                w={48 * pixelSizeWithMargin}
+                display="inline-block"
+                m={2}
               >
                 <Box>
                   <Text>Frame {_idx}</Text>
-                  <Box
-                    style={{ overflowX: "auto" }}
-                  >
+                  <Box>
                     <div
-                      style={{ minWidth: 48 * pixelSizeWithMargin }}
-                      onMouseDown={() => setMouseDown(true)}
-                      onMouseUp={() => setMouseDown(false)}
+                      style={{
+                        width: 48 * pixelSizeWithMargin,
+                        height: 12 * pixelSizeWithMargin,
+                      }}
                     >
                       {
                         Array.from(Array(12)).map((x, i) => (
@@ -96,34 +113,34 @@ export function PixelAnimations() {
             );
           })
         }
-        </SimpleGrid>
-        <Heading as='h4' size='md' my={4}>Encoded</Heading>
-        <Textarea
-          isInvalid={invalidInput}
-          multiple
-          errorBorderColor='red.300'
-          value={encoded}
-          onChange={(e) => {
-            setEncoded(e.target.value);
-            let isInvalid = false;
-            let images = e.target.value.split("\n").filter(x => x.length > 0);
-            for(const im of images) {
-              try {
-                const arr = decodeBitmap(im);
-                if (!arr) {
-                  isInvalid = true;
-                }
-              } catch (e) {
+      </Box>
+      <Heading as='h4' size='md' my={4}>Encoded</Heading>
+      <Textarea
+        isInvalid={invalidInput}
+        multiple
+        fontFamily="monospace"
+        errorBorderColor='red.300'
+        value={encoded}
+        onChange={(e) => {
+          setEncoded(e.target.value);
+          let isInvalid = false;
+          let images = e.target.value.split("\n").filter(x => x.length > 0);
+          for(const im of images) {
+            try {
+              const arr = decodeBitmap(im);
+              if (!arr) {
                 isInvalid = true;
               }
+            } catch (e) {
+              isInvalid = true;
             }
-            if (!isInvalid) {
-              play(images);
-            }
-          }}
-          size='xs'
-        />
-      </Box>
-    </div>
+          }
+          if (!isInvalid) {
+            play(images);
+          }
+        }}
+        size='xs'
+      />
+    </Box>
   );
 }
